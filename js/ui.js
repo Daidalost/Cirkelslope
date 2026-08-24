@@ -1,6 +1,7 @@
 // ui.js — alt DOM-overlay: menu, portalopgave, HUD og game over.
 
 import { parseAnswer, isCorrect, diagnose } from './questions.js';
+import * as hs from './highscore.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -150,6 +151,16 @@ export class UI {
     this.el.hud.hidden = true;
     this.el.touch.hidden = true;
     this.el.gameover.hidden = false;
+
+    this.go = {
+      entry: { name: '', distance: Math.floor(distance), portals, ts: Date.now() },
+      saved: null,
+      busy: false,
+      tab: 'local',
+      draft: hs.loadName(),
+      error: '',
+    };
+
     this.el.goBody.innerHTML = `
       <p class="go-cause">${cause}</p>
       <div class="go-stats">
@@ -157,7 +168,154 @@ export class UI {
         <div><strong>${portals}</strong><span>portaler klaret</span></div>
         <div><strong>${Math.floor(best)}</strong><span>bedste tur</span></div>
       </div>
-      ${newBest ? '<p class="go-best">Ny rekord!</p>' : ''}`;
+      ${newBest ? '<p class="go-best">Ny rekord!</p>' : ''}
+      <div id="go-name"></div>
+      <section class="hs">
+        <div class="hs-tabs" id="hs-tabs" role="tablist"></div>
+        <ol class="hs-list" id="hs-list"></ol>
+        <p class="hs-note" id="hs-note"></p>
+      </section>`;
+
+    this.renderHighscore();
+
+    // hent den fælles liste i baggrunden og tegn igen når den lander
+    hs.fetchOnline().then(() => {
+      if (!this.el.gameover.hidden) this.renderHighscore();
+    });
+  }
+
+  /** Tegner navnefelt, faneblade og selve listen. Kaldes igen når noget ændrer sig. */
+  renderHighscore() {
+    const go = this.go;
+    if (!go) return;
+
+    const local = hs.loadLocal();
+    const onlineOn = hs.online.state !== 'fra' && hs.online.state !== 'ukendt';
+    if (!onlineOn && go.tab === 'online') go.tab = 'local';
+
+    const qualifies =
+      hs.qualifies(local, go.entry) ||
+      (hs.online.state === 'klar' && hs.qualifies(hs.online.scores, go.entry));
+
+    // ---- navnefelt ----
+    const nameBox = document.getElementById('go-name');
+    if (go.saved || !qualifies) {
+      nameBox.innerHTML = go.saved
+        ? `<p class="hs-saved">Gemt som <strong></strong></p>`
+        : '';
+      if (go.saved) nameBox.querySelector('strong').textContent = go.saved.name;
+    } else {
+      nameBox.innerHTML = `
+        <form class="hs-form" autocomplete="off">
+          <label for="hs-name">Du kom på highscoren – skriv dit navn</label>
+          <div class="hs-inputrow">
+            <input id="hs-name" type="text" maxlength="${hs.NAME_MAX}" placeholder="dit navn"
+                   enterkeyhint="done" aria-describedby="hs-error">
+            <button type="submit" class="btn btn-save" ${go.busy ? 'disabled' : ''}>
+              ${go.busy ? 'Gemmer…' : 'Gem'}
+            </button>
+          </div>
+          <p class="hs-error" id="hs-error" role="status">${go.error}</p>
+        </form>`;
+      const input = nameBox.querySelector('#hs-name');
+      input.value = go.draft;
+      input.addEventListener('input', () => { go.draft = input.value; });
+      nameBox.querySelector('form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        this.saveScore(input.value);
+      });
+      if (!go.busy && document.activeElement !== input) setTimeout(() => input.focus(), 40);
+    }
+
+    // ---- faneblade ----
+    const tabs = document.getElementById('hs-tabs');
+    tabs.innerHTML = '';
+    const addTab = (id, label) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'hs-tab' + (go.tab === id ? ' active' : '');
+      b.textContent = label;
+      b.setAttribute('role', 'tab');
+      b.setAttribute('aria-selected', String(go.tab === id));
+      b.addEventListener('click', () => { go.tab = id; this.renderHighscore(); });
+      tabs.appendChild(b);
+    };
+    addTab('local', 'Denne computer');
+    if (onlineOn) addTab('online', 'Online');
+
+    // ---- listen ----
+    const list = go.tab === 'online' ? hs.online.scores.slice(0, hs.TOP) : local;
+    const ol = document.getElementById('hs-list');
+    ol.innerHTML = '';
+    if (!list.length) {
+      const li = document.createElement('li');
+      li.className = 'hs-empty';
+      li.textContent = hs.online.state === 'henter' && go.tab === 'online'
+        ? 'Henter listen…'
+        : 'Ingen på listen endnu – vær den første.';
+      ol.appendChild(li);
+    }
+    for (let i = 0; i < list.length; i++) {
+      const e = list[i];
+      const li = document.createElement('li');
+      const isMine = go.saved && e.name === go.saved.name
+        && e.distance === go.saved.distance && Math.abs((e.ts || 0) - go.saved.ts) < 5000;
+      li.className = 'hs-row' + (isMine ? ' mine' : '');
+      const pos = document.createElement('span');
+      pos.className = 'hs-pos';
+      pos.textContent = (i + 1) + '.';
+      const nm = document.createElement('span');
+      nm.className = 'hs-name';
+      nm.textContent = e.name;                    // textContent: navne kan aldrig blive til markup
+      const dist = document.createElement('span');
+      dist.className = 'hs-dist';
+      dist.textContent = e.distance + ' m';
+      const por = document.createElement('span');
+      por.className = 'hs-portals';
+      por.textContent = e.portals + (e.portals === 1 ? ' portal' : ' portaler');
+      li.append(pos, nm, dist, por);
+      ol.appendChild(li);
+    }
+
+    // ---- fodnote ----
+    const note = document.getElementById('hs-note');
+    if (go.tab === 'online') {
+      note.textContent = hs.online.state === 'klar'
+        ? 'Fælles liste for alle der spiller.'
+        : hs.online.state === 'henter'
+          ? 'Henter …'
+          : 'Kunne ikke nå online-listen lige nu. Den lokale liste virker stadig.';
+    } else {
+      note.textContent = 'Gemt i denne browser.';
+    }
+  }
+
+  async saveScore(rawName) {
+    const go = this.go;
+    const name = hs.cleanName(rawName);
+    if (!name) { go.error = 'Skriv et navn først.'; return this.renderHighscore(); }
+    if (hs.isBlocked(name)) { go.error = 'Vælg et pænere navn.'; return this.renderHighscore(); }
+
+    go.error = '';
+    go.busy = true;
+    this.renderHighscore();
+
+    const entry = { ...go.entry, name };
+    hs.rememberName(name);
+    hs.addLocal(entry);
+
+    if (hs.online.state === 'klar' || hs.online.state === 'fejl') {
+      const res = await hs.submitOnline(entry);
+      if (res && !res.ok && res.reason === 'blocked_name') {
+        go.busy = false;
+        go.error = 'Vælg et pænere navn.';
+        return this.renderHighscore();
+      }
+    }
+
+    go.busy = false;
+    go.saved = entry;
+    this.renderHighscore();
   }
 
   enableTouch() { this.touchEnabled = true; }

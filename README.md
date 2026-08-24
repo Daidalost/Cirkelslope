@@ -19,6 +19,54 @@ enten omkredsen (`O = 2 · π · r`) eller arealet (`A = π · r²`). Svaret må
 med komma eller punktum. Rigtigt svar låser **Fortsæt** op. Er svaret forkert,
 får du et målrettet vink — og efter to forsøg vises fremgangsmåden trin for trin.
 
+## Highscore
+
+Der er to lister, og de virker uafhængigt af hinanden:
+
+- **Denne computer** – top 10 gemt i browserens `localStorage`. Virker altid, også
+  uden internet og uden nogen opsætning overhovedet.
+- **Online** – fælles top 10 for alle der spiller. Kræver en Redis-database
+  (se nedenfor). Er den ikke sat op, forsvinder fanen bare, og resten fungerer.
+
+Man bliver kun bedt om sit navn hvis turen faktisk kommer på en af listerne.
+Navnet huskes til næste tur. Der rangeres efter meter, og antal klarede portaler
+afgør ved dødt løb.
+
+Navne renses både i browseren og på serveren: kun bogstaver, tal og enkelte tegn,
+højst 14 tegn, og en blokliste fanger de værste. Navne vises altid via
+`textContent`, så et navn aldrig kan blive til kode på de andres skærme.
+
+### Slå den fælles liste til
+
+1. I dit Vercel-projekt: **Storage → Create Database → Marketplace → Upstash for Redis**
+   (Vercel KV findes ikke længere; Redis kommer via Marketplace nu). Gratis-planen
+   er rigelig — spillet skriver én lille række pr. highscore.
+2. Forbind databasen til projektet. Vercel lægger selv miljøvariablerne ind.
+3. **Redeploy** projektet — miljøvariabler slår først igennem ved en ny deployment.
+
+`api/scores.js` leder efter disse navne, i denne rækkefølge:
+
+```
+KV_REST_API_URL        / KV_REST_API_TOKEN
+UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN
+REDIS_REST_URL         / REDIS_REST_TOKEN
+```
+
+Hedder din integrations variabler noget helt fjerde, opretter du bare
+`KV_REST_API_URL` og `KV_REST_API_TOKEN` manuelt under **Settings → Environment
+Variables** med de samme værdier. Du kan tjekke om det virker ved at åbne
+`https://<dit-projekt>.vercel.app/api/scores` — den skal svare `{"ok":true,...}`.
+
+### Rydde listen
+
+Alt ligger i ét Redis-nøgle. Slet den fra Upstash-konsollen, eller:
+
+```bash
+curl -X POST "$KV_REST_API_URL/pipeline" \
+  -H "Authorization: Bearer $KV_REST_API_TOKEN" \
+  -d '[["DEL","cirkelslisken:scores"]]'
+```
+
 ## Kør lokalt
 
 Projektet er ren statisk HTML/CSS/JS uden byggetrin og uden npm-afhængigheder.
@@ -31,6 +79,10 @@ npx serve .
 ```
 
 Åbn derefter http://localhost:8000
+
+Bemærk at `/api/scores` ikke kører med en almindelig statisk server — den lokale
+highscore virker, men online-fanen vil være væk. Vil du teste hele kæden lokalt,
+brug `vercel dev` i stedet.
 
 ## Deploy til Vercel
 
@@ -54,6 +106,8 @@ vercel --prod # produktion
 ```
 index.html          markup, HUD og overlays
 css/style.css       hele designet
+api/scores.js       serverless-endpoint til den fælles highscore
+js/highscore.js     lokal top 10 + kald til /api/scores
 js/main.js          opstart og fejlhåndtering
 js/game.js          fysik, kamera, portallogik, tegneløkke
 js/track.js         den procedurelle bane: form, huller, søjler, portaler
@@ -77,6 +131,8 @@ js/audio.js         syntetiske lydeffekter (WebAudio, ingen lydfiler)
 | Hoppets højde | `js/game.js` → `JUMP_V` |
 | Banens bredde og hældning | `js/track.js` → `halfWidth()`, `height()` |
 | Farver | `js/world.js` → `PALETTE` og `css/style.css` → `:root` |
+| Antal pladser på highscoren | `js/highscore.js` → `TOP` |
+| Blokerede navne | `js/highscore.js` og `api/scores.js` → `BLOCKED` (begge steder) |
 
 ## Krav
 

@@ -95,6 +95,8 @@ export class Game {
 
     window.addEventListener('keydown', (e) => {
       if (this.state === 'question') return;              // lad tastaturet tilhøre svarfeltet
+      const t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
       if (e.repeat) { if (set(e.code, true)) e.preventDefault(); return; }
       if (set(e.code, true)) e.preventDefault();
       if ((e.code === 'Space' || e.code === 'Enter') && this.state !== 'playing') {
