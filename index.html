@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#120a24">
+<meta name="description" content="Cirkelslisken – balancér kuglen ned ad slisken og regn omkreds og areal ud ved de runde portaler.">
+<title>Cirkelslisken</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./css/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%235ef2c8' stroke-width='4'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23ffb45c'/%3E%3C/svg%3E">
+</head>
+<body>
+
+<canvas id="scene" aria-label="Spilbane"></canvas>
+
+<!-- HUD ------------------------------------------------------------ -->
+<div id="hud" class="hud" hidden>
+  <div class="hud-item"><span>Afstand</span><strong id="hud-dist">0 m</strong></div>
+  <div class="hud-item"><span>Portaler</span><strong id="hud-portals">0</strong></div>
+  <div class="hud-item"><span>Portal om</span><strong id="hud-next">–</strong></div>
+  <div class="hud-item"><span>Fart</span><strong id="hud-speed">0 km/t</strong></div>
+  <button id="btn-sound" class="hud-sound" title="Slå lyd fra" aria-label="Slå lyd fra">🔊</button>
+</div>
+
+<!-- Touch-styring --------------------------------------------------- -->
+<div id="touch" class="touch" hidden>
+  <button id="t-left" class="tbtn" aria-label="Venstre">◀</button>
+  <button id="t-jump" class="tbtn tbtn-jump" aria-label="Hop">HOP</button>
+  <button id="t-right" class="tbtn" aria-label="Højre">▶</button>
+</div>
+
+<!-- Startmenu ------------------------------------------------------- -->
+<div id="menu" class="overlay">
+  <div class="panel panel-menu">
+    <div class="logo">
+      <svg viewBox="0 0 120 120" aria-hidden="true">
+        <circle cx="60" cy="60" r="46" fill="none" stroke="#5ef2c8" stroke-width="5"/>
+        <circle cx="60" cy="60" r="32" fill="none" stroke="#8a6bff" stroke-width="4" stroke-dasharray="10 8"/>
+        <circle cx="60" cy="60" r="13" fill="#ffb45c"/>
+        <line x1="60" y1="60" x2="106" y2="60" stroke="#ffd166" stroke-width="3" stroke-dasharray="5 4"/>
+      </svg>
+    </div>
+    <h1>Cirkelslisken</h1>
+    <p class="tagline">Styr kuglen ned ad den stadig stejlere sliske – og regn dig gennem de runde portaler.</p>
+
+    <div class="keys">
+      <div class="key-row"><kbd>◀</kbd><kbd>▶</kbd><span>styr til siderne</span></div>
+      <div class="key-row"><kbd class="wide">mellemrum</kbd><span>hop over hullerne</span></div>
+    </div>
+
+    <div class="rules">
+      <div class="rule"><span class="dot dot-a"></span><span>Ved hver portal får du en cirkel med kendt radius.</span></div>
+      <div class="rule"><span class="dot dot-b"></span><span>Find omkredsen <em>O = 2 · π · r</em> eller arealet <em>A = π · r²</em></span></div>
+      <div class="rule"><span class="dot dot-c"></span><span>Rigtigt svar låser <strong>Fortsæt</strong> op – så ruller du videre.</span></div>
+    </div>
+
+    <button id="btn-start" class="btn btn-big">Start spillet</button>
+    <p class="fineprint">Regn med π = 3,14 · Til mellemtrinnet (4.–6. klasse)</p>
+  </div>
+</div>
+
+<!-- Portalopgave ---------------------------------------------------- -->
+<div id="question" class="overlay overlay-q" hidden>
+  <div class="panel panel-q" id="q-body"></div>
+</div>
+
+<!-- Game over -------------------------------------------------------- -->
+<div id="gameover" class="overlay" hidden>
+  <div class="panel panel-go">
+    <h2>Turen sluttede her</h2>
+    <div id="go-body"></div>
+    <button id="btn-restart" class="btn btn-big">Prøv igen</button>
+    <p class="fineprint">Tip: tryk <kbd>mellemrum</kbd> for at starte forfra</p>
+  </div>
+</div>
+
+<noscript><p class="noscript">Cirkelslisken kræver JavaScript.</p></noscript>
+
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>
