@@ -7,6 +7,7 @@
   --violet:     #8a6bff;
   --amber:      #ffb45c;
   --pink:       #ff6fa8;
+  --fire:       #ff8a2b;
   --panel:      rgba(24, 14, 46, 0.82);
   --panel-line: rgba(160, 130, 255, 0.28);
   --shadow:     0 24px 70px rgba(0, 0, 0, 0.55);
@@ -93,7 +94,34 @@ kbd {
   line-height: 1.25;
 }
 #hud-portals { color: var(--mint); }
+#hud-hoops { color: var(--fire); }
 #hud-next { color: var(--amber); }
+
+/* kvittering når man rammer en ildring */
+.bonus {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Fredoka', sans-serif;
+  font-size: clamp(1.8rem, 6vw, 2.8rem);
+  font-weight: 700;
+  color: var(--fire);
+  text-shadow: 0 0 26px rgba(255, 110, 20, 0.75), 0 4px 14px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  z-index: 7;
+  opacity: 0;
+}
+.bonus.show { animation: bonusPop 0.9s ease-out forwards; }
+@keyframes bonusPop {
+  0%   { opacity: 0; transform: translate(-50%, -30%) scale(0.7); }
+  22%  { opacity: 1; transform: translate(-50%, -55%) scale(1.08); }
+  55%  { opacity: 1; transform: translate(-50%, -68%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -105%) scale(0.94); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bonus.show { animation: none; opacity: 1; }
+}
 
 .hud-sound {
   border: 0;
@@ -198,6 +226,8 @@ kbd.wide { padding: 0.20em 0.9em; }
 .dot-a { background: var(--mint); }
 .dot-b { background: var(--violet); }
 .dot-c { background: var(--amber); }
+.dot-fire { background: var(--fire); box-shadow: 0 0 10px rgba(255, 138, 43, 0.8); }
+.rule strong.fire { color: var(--fire); }
 
 /* ---- knapper ------------------------------------------------------ */
 
@@ -359,7 +389,8 @@ kbd.wide { padding: 0.20em 0.9em; }
   color: var(--mint);
 }
 .go-stats div:nth-child(2) strong { color: var(--amber); }
-.go-stats div:nth-child(3) strong { color: var(--violet); }
+.go-stats div:nth-child(3) strong { color: var(--fire); }
+.go-stats div:nth-child(4) strong { color: var(--violet); }
 .go-stats span { font-size: 0.7rem; letter-spacing: 0.06em; color: var(--ink-dim); }
 .go-best { color: var(--amber); font-family: 'Fredoka', sans-serif; font-size: 1.1rem; margin: 0 0 14px; }
 
@@ -512,7 +543,7 @@ kbd.wide { padding: 0.20em 0.9em; }
   .hud-item { min-width: 0; padding: 3px 9px; }
   .hud-item strong { font-size: 0.86rem; white-space: nowrap; }
   .hud-item span { font-size: 0.52rem; letter-spacing: 0.05em; white-space: nowrap; }
-  .hud-item:nth-child(4) { display: none; }   /* fart fylder for meget på telefon */
+  .hud-item:nth-child(5) { display: none; }   /* fart fylder for meget på telefon */
   .hud-sound { width: 32px; height: 32px; font-size: 0.85rem; }
 }
 

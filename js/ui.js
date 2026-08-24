@@ -32,8 +32,10 @@ export class UI {
       hud: $('hud'),
       hudDist: $('hud-dist'),
       hudPortals: $('hud-portals'),
+      hudHoops: $('hud-hoops'),
       hudNext: $('hud-next'),
       hudSpeed: $('hud-speed'),
+      bonus: $('bonus'),
       qBody: $('q-body'),
       goBody: $('go-body'),
       touch: $('touch'),
@@ -62,11 +64,27 @@ export class UI {
     if (this.touchEnabled) this.el.touch.hidden = false;
   }
 
-  updateHud({ distance, portals, speed, nextPortal }) {
+  updateHud({ distance, portals, hoops, speed, nextPortal }) {
     this.el.hudDist.textContent = Math.max(0, Math.floor(distance)) + ' m';
     this.el.hudPortals.textContent = portals;
+    this.el.hudHoops.textContent = hoops;
     this.el.hudSpeed.textContent = Math.round(speed * 3.6) + ' km/t';
     this.el.hudNext.textContent = nextPortal === null ? '–' : Math.max(0, Math.ceil(nextPortal)) + ' m';
+  }
+
+  /** Lille kvittering når man rammer en ildring. */
+  flashBonus(meters) {
+    const el = this.el.bonus;
+    el.textContent = '+' + meters + ' m';
+    el.hidden = false;
+    el.classList.remove('show');
+    void el.offsetWidth;              // genstarter animationen
+    el.classList.add('show');
+    clearTimeout(this._bonusTimer);
+    this._bonusTimer = setTimeout(() => {
+      el.classList.remove('show');
+      el.hidden = true;
+    }, 900);
   }
 
   /** Viser portalopgaven. `done()` kaldes når spilleren trykker Fortsæt. */
@@ -147,7 +165,7 @@ export class UI {
     setTimeout(() => input.focus(), 60);
   }
 
-  showGameOver({ distance, portals, cause, best, newBest }) {
+  showGameOver({ distance, portals, hoops = 0, cause, best, newBest }) {
     this.el.hud.hidden = true;
     this.el.touch.hidden = true;
     this.el.gameover.hidden = false;
@@ -166,6 +184,7 @@ export class UI {
       <div class="go-stats">
         <div><strong>${Math.floor(distance)}</strong><span>meter</span></div>
         <div><strong>${portals}</strong><span>portaler klaret</span></div>
+        <div class="go-fire"><strong>${hoops}</strong><span>ildringe</span></div>
         <div><strong>${Math.floor(best)}</strong><span>bedste tur</span></div>
       </div>
       ${newBest ? '<p class="go-best">Ny rekord!</p>' : ''}

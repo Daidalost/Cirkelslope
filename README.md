@@ -14,6 +14,17 @@ Bygget til mellemtrinnet (4.–6. klasse) med π = 3,14.
 
 På telefon og tablet vises tre knapper nederst på skærmen i stedet.
 
+Slisken er tre kørebaner bred. Undervejs møder man:
+
+- **Huller** tværs over hele banen. Hopper man ikke, falder man igennem og turen er slut.
+- **Brudte kørebaner** — strækninger på 35–65 m hvor en eller to af de tre baner
+  mangler. Fænomenet begynder efter anden portal og bliver hyppigere jo længere
+  man kommer; til sidst er der steder med kun én bane tilbage. Lysende tværbjælker
+  markerer præcis hvor en bane slipper op. Der står aldrig røde søjler i et brud.
+- **Røde søjler** som ikke kan hoppes over — dem skal man styre udenom.
+- **Ildringe** der svæver over banen. Hopper man igennem, giver det 40 meter ekstra.
+  Ruller man bare under dem, sker der ingenting.
+
 Ved hver portal fryser spillet. Du får en cirkel med kendt radius og skal finde
 enten omkredsen (`O = 2 · π · r`) eller arealet (`A = π · r²`). Svaret må skrives
 med komma eller punktum. Rigtigt svar låser **Fortsæt** op. Er svaret forkert,
@@ -30,7 +41,8 @@ Der er to lister, og de virker uafhængigt af hinanden:
 
 Man bliver kun bedt om sit navn hvis turen faktisk kommer på en af listerne.
 Navnet huskes til næste tur. Der rangeres efter meter, og antal klarede portaler
-afgør ved dødt løb.
+afgør ved dødt løb. Bonussen fra ildringene tæller med i meterne, så det kan
+betale sig at hoppe efter dem.
 
 Navne renses både i browseren og på serveren: kun bogstaver, tal og enkelte tegn,
 højst 14 tegn, og en blokliste fanger de værste. Navne vises altid via
@@ -129,6 +141,11 @@ js/audio.js         syntetiske lydeffekter (WebAudio, ingen lydfiler)
 | Afstand mellem portaler | `js/track.js` → `PORTAL_SPACING` |
 | Fart og hvor hurtigt den stiger | `js/game.js` → `speedAt()` |
 | Hoppets højde | `js/game.js` → `JUMP_V` |
+| Hvor tit kørebaner brydes | `js/track.js` → `ensureFeatures()`, afsnit 2 |
+| Hvor tidligt brud begynder | `js/track.js` → `nextLaneZ` i konstruktøren |
+| Ildringenes tæthed og bonus | `js/track.js` → afsnit 5 og `HOOP_BONUS` |
+| Ildringenes højde og størrelse | `js/track.js` → `HOOP_Y`, `HOOP_R` |
+| Hullernes længde og hyppighed | `js/track.js` → `ensureFeatures()`, afsnit 3 |
 | Banens bredde og hældning | `js/track.js` → `halfWidth()`, `height()` |
 | Farver | `js/world.js` → `PALETTE` og `css/style.css` → `:root` |
 | Antal pladser på highscoren | `js/highscore.js` → `TOP` |

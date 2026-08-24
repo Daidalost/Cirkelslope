@@ -20,10 +20,13 @@
 <div id="hud" class="hud" hidden>
   <div class="hud-item"><span>Afstand</span><strong id="hud-dist">0 m</strong></div>
   <div class="hud-item"><span>Portaler</span><strong id="hud-portals">0</strong></div>
+  <div class="hud-item"><span>Ildringe</span><strong id="hud-hoops">0</strong></div>
   <div class="hud-item"><span>Portal om</span><strong id="hud-next">–</strong></div>
   <div class="hud-item"><span>Fart</span><strong id="hud-speed">0 km/t</strong></div>
   <button id="btn-sound" class="hud-sound" title="Slå lyd fra" aria-label="Slå lyd fra">🔊</button>
 </div>
+
+<div id="bonus" class="bonus" hidden aria-hidden="true"></div>
 
 <!-- Touch-styring --------------------------------------------------- -->
 <div id="touch" class="touch" hidden>
@@ -55,6 +58,7 @@
       <div class="rule"><span class="dot dot-a"></span><span>Ved hver portal får du en cirkel med kendt radius.</span></div>
       <div class="rule"><span class="dot dot-b"></span><span>Find omkredsen <em>O = 2 · π · r</em> eller arealet <em>A = π · r²</em></span></div>
       <div class="rule"><span class="dot dot-c"></span><span>Rigtigt svar låser <strong>Fortsæt</strong> op – så ruller du videre.</span></div>
+      <div class="rule"><span class="dot dot-fire"></span><span>Hop gennem <strong class="fire">ildringene</strong> – hver giver 40 meter ekstra. Og pas på huller og brudte kørebaner.</span></div>
     </div>
 
     <button id="btn-start" class="btn btn-big">Start spillet</button>

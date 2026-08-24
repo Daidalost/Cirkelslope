@@ -1,7 +1,7 @@
 // game.js — spillets kerne: fysik, kamera, portaler og tegneløkke.
 
 import { Renderer } from './gl.js';
-import { Track, VIEW_AHEAD, mulberry32 } from './track.js';
+import { Track, VIEW_AHEAD, mulberry32, HOOP_R, HOOP_TUBE, HOOP_Y, HOOP_BONUS } from './track.js';
 import { World, PALETTE, createAssets } from './world.js';
 import { makeQuestion } from './questions.js';
 import { mat4, perspective, lookAt, compose, clamp, damp } from './mat.js';
@@ -9,10 +9,10 @@ import { initAudio, sfx } from './audio.js';
 
 const BALL_R      = 0.95;
 const GRAVITY     = 34;
-const JUMP_V      = 12.6;
+const JUMP_V      = 14;      // hoppet skal kunne nå op i ildringene
 const LAT_ACC     = 52;
 const LAT_MAX     = 21;
-const FALL_DEATH  = 26;      // hvor langt under banen man er "væk"
+const FALL_DEATH  = 18;      // hvor langt under banen man er "væk"
 const PILLAR_H    = 3.2;
 const PORTAL_LEAD = 17;      // opgaven dukker op lige før portalen, så man kan se den forfra
 
@@ -65,19 +65,26 @@ export class Game {
     this.ball = {
       x: s.x, y: s.y + BALL_R, z: 0,
       vx: 0, vy: 0, grounded: true, rollX: 0, rollZ: 0,
+      doomed: false, doomCause: null,
     };
     this.camX = s.x;
     this.camY = s.y + 7;
     this.lookX = s.x;
     this.portalsSolved = 0;
+    this.hoopsTaken = 0;
+    this.bonus = 0;
     this.attemptsTotal = 0;
     this.currentPortal = null;
     this.track.update(0);
   }
 
-  start() {
+  /** Kørte meter plus bonus fra ildringene. */
+  get score() { return this.ball.z + this.bonus; }
+
+  /** `seed` er valgfrit og bruges kun når man vil gentage præcis samme bane. */
+  start(seed) {
     initAudio();
-    this.reset(Date.now());
+    this.reset(seed === undefined ? Date.now() : seed);
     this.state = 'playing';
     this.ui.showPlaying();
   }
@@ -152,7 +159,8 @@ export class Game {
 
     const s = this.track.sample(b.z);
     const groundY = s.y + BALL_R;
-    const onTrack = !s.gap && Math.abs(b.x - s.x) <= s.half;
+    // fast grund kræver både at der ikke er hul, og at kørebanen under kuglen findes
+    const onTrack = this.track.isSolid(b.z, b.x);
 
     // hop
     if (this.wantJump && b.grounded && onTrack) {
@@ -168,7 +176,15 @@ export class Game {
     } else {
       b.vy -= GRAVITY * dt;
       b.y += b.vy * dt;
-      if (onTrack && b.vy <= 0 && b.y <= groundY) {
+      // først når kuglen er nået ned under banekanten uden grund under sig,
+      // er den fortabt — indtil da kan den nå over på den anden side
+      if (!onTrack && !b.doomed && b.y - BALL_R <= s.y + 0.1) {
+        b.doomed = true;
+        b.doomCause = s.gap ? 'Du faldt ned i hullet.'
+          : this.track.laneIndex(b.z, b.x) < 0 ? 'Du røg ud over kanten.'
+          : 'Du kørte ud hvor kørebanen manglede.';
+      }
+      if (onTrack && !b.doomed && b.vy <= 0 && b.y <= groundY) {
         if (!b.grounded) sfx.land();
         b.y = groundY; b.vy = 0; b.grounded = true;
       } else {
@@ -181,8 +197,8 @@ export class Game {
     b.rollZ -= (b.vx * dt) / BALL_R;
 
     // faldet ud over kanten eller ned i et hul?
-    if (b.y < s.y - FALL_DEATH) {
-      return this.die(s.gap ? 'Du faldt ned i hullet.' : 'Du røg ud over kanten.');
+    if (b.doomed && b.y < s.y - FALL_DEATH) {
+      return this.die(b.doomCause || 'Du faldt ned.');
     }
 
     // ramte en søjle?
@@ -193,6 +209,23 @@ export class Game {
           Math.abs(o.x - b.x) < o.r + BALL_R * 0.9 &&
           b.y - BALL_R < this.track.height(o.z) + PILLAR_H) {
         return this.die('Du ramte en søjle.');
+      }
+    }
+
+    // hoppede vi gennem en ildring?
+    for (const h of this.track.hoops) {
+      if (h.z < prevZ - 5) continue;
+      if (h.z > b.z + 5) break;
+      if (!h.taken && prevZ < h.z && b.z >= h.z) {
+        const c = this.track.hoopCenter(h);
+        const dx = b.x - c.x, dy = b.y - c.y;
+        if (Math.hypot(dx, dy) < HOOP_R - HOOP_TUBE - BALL_R * 0.6) {
+          h.taken = true;
+          this.hoopsTaken++;
+          this.bonus += HOOP_BONUS;
+          sfx.hoop();
+          this.ui.flashBonus(HOOP_BONUS);
+        }
       }
     }
 
@@ -210,8 +243,9 @@ export class Game {
 
     const next = this.track.portals.find(p => !p.passed);
     this.ui.updateHud({
-      distance: b.z,
+      distance: this.score,
       portals: this.portalsSolved,
+      hoops: this.hoopsTaken,
       speed,
       nextPortal: next ? next.z - b.z : null,
     });
@@ -232,6 +266,7 @@ export class Game {
       b.x = this.track.centerX(b.z);
       b.y = this.track.height(b.z) + BALL_R;
       b.vx = 0; b.vy = 0; b.grounded = true;
+      b.doomed = false; b.doomCause = null;
       this.track.update(b.z);
       this.state = 'playing';
       this.ui.showPlaying();
@@ -242,11 +277,11 @@ export class Game {
     if (this.state !== 'playing') return;
     this.state = 'dead';
     sfx.death();
-    const dist = this.ball.z;
+    const dist = this.score;
     const newBest = dist > this.best;
     if (newBest) { this.best = dist; this.saveBest(dist); }
     this.ui.showGameOver({
-      distance: dist, portals: this.portalsSolved, cause,
+      distance: dist, portals: this.portalsSolved, hoops: this.hoopsTaken, cause,
       best: this.best, newBest,
     });
   }
@@ -309,7 +344,7 @@ export class Game {
 
     // skygge under kuglen
     const gs = this.track.sample(b.z);
-    if (!gs.gap && Math.abs(b.x - gs.x) <= gs.half) {
+    if (this.track.isSolid(b.z, b.x)) {
       const drop = clamp((b.y - BALL_R - gs.y) / 6, 0, 1);
       const sc = BALL_R * (1.5 - 0.5 * drop);
       compose(this.model, [b.x, gs.y + 0.06, b.z], [0, 0, 0], [sc, sc, sc]);
@@ -318,7 +353,38 @@ export class Game {
       r.setBlend(false);
     }
 
+    this.drawHoops(r);
     this.drawPortals(r);
+  }
+
+  /** Ildringene: en flakkende ring man kan hoppe igennem. */
+  drawHoops(r) {
+    const b = this.ball;
+    const t = this.time;
+    for (const h of this.track.hoops) {
+      if (h.z < b.z - 25 || h.z > b.z + VIEW_AHEAD) continue;
+      const c = this.track.hoopCenter(h);
+      // to usammenhængende svingninger giver et uroligt, flammeagtigt liv
+      const flick = 1 + Math.sin(t * 13 + h.z) * 0.030 + Math.sin(t * 7.3 + h.z * 0.5) * 0.022;
+      const s = HOOP_R * flick;
+
+      if (h.taken) {
+        compose(this.model, [c.x, c.y, h.z], [0, 0, t * 0.4], [s, s, s]);
+        r.draw(this.assets.hoopRing, this.model, PALETTE.portal, 0.7);
+        continue;
+      }
+
+      compose(this.model, [c.x, c.y, h.z], [0, 0, t * 1.5], [s, s, s]);
+      r.draw(this.assets.hoopRing, this.model, PALETTE.fire, 1);
+
+      r.setBlend(true);
+      const g1 = s * 1.13, g2 = s * 1.28;
+      compose(this.model, [c.x, c.y, h.z], [0, 0, -t * 2.1], [g1, g1, g1]);
+      r.draw(this.assets.hoopGlow, this.model, PALETTE.fireGlow, 1, 0.42);
+      compose(this.model, [c.x, c.y, h.z], [0, 0, t * 1.1], [g2, g2, g2]);
+      r.draw(this.assets.hoopGlow, this.model, PALETTE.fireDeep, 1, 0.22);
+      r.setBlend(false);
+    }
   }
 
   drawPortals(r) {

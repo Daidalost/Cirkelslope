@@ -34,6 +34,8 @@ export const sfx = {
   land:    () => tone({ freq: 180, to: 110, dur: 0.10, type: 'sine', gain: 0.10 }),
   portal:  () => { tone({ freq: 520, dur: 0.20, type: 'sine', gain: 0.10 });
                    tone({ freq: 780, dur: 0.28, type: 'sine', gain: 0.08, delay: 0.08 }); },
+  hoop:    () => { tone({ freq: 300, to: 900, dur: 0.18, type: 'triangle', gain: 0.11 });
+                   tone({ freq: 1320, dur: 0.22, type: 'sine', gain: 0.09, delay: 0.09 }); },
   correct: () => { tone({ freq: 660, dur: 0.13, type: 'triangle', gain: 0.13 });
                    tone({ freq: 880, dur: 0.16, type: 'triangle', gain: 0.13, delay: 0.11 });
                    tone({ freq: 1180, dur: 0.24, type: 'sine', gain: 0.10, delay: 0.22 }); },
