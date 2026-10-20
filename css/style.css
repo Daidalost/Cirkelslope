@@ -122,6 +122,66 @@ kbd {
 @media (prefers-reduced-motion: reduce) {
   .bonus.show { animation: none; opacity: 1; }
 }
+.bonus.fx-turbo  { color: #ffe14a; text-shadow: 0 0 26px rgba(255, 225, 74, 0.7), 0 4px 14px rgba(0, 0, 0, 0.5); }
+.bonus.fx-bullet { color: #8fb0ff; text-shadow: 0 0 26px rgba(110, 150, 255, 0.75), 0 4px 14px rgba(0, 0, 0, 0.5); }
+.bonus.fx-lowg   { color: #ff8ad8; text-shadow: 0 0 26px rgba(255, 110, 210, 0.7), 0 4px 14px rgba(0, 0, 0, 0.5); }
+
+/* ---- aktive effekter (pickups) ------------------------------------- */
+
+.fx {
+  position: fixed;
+  top: calc(max(14px, env(safe-area-inset-top)) + 66px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 5;
+  pointer-events: none;
+}
+.fx-badge {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 112px;
+  padding: 7px 12px 8px;
+  border-radius: 14px;
+  background: rgba(18, 10, 36, 0.62);
+  border: 1px solid currentColor;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.fx-name {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+}
+.fx-bar {
+  display: block;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+.fx-bar i { display: block; height: 100%; width: 100%; background: currentColor; border-radius: inherit; }
+.fx-badge.fx-turbo  { color: #ffe14a; }
+.fx-badge.fx-bullet { color: #8fb0ff; }
+.fx-badge.fx-lowg   { color: #ff8ad8; }
+
+/* farvet vignet rundt om skærmen, så man kan mærke effekten */
+body::before, body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+body::before { box-shadow: inset 0 0 140px 40px rgba(90, 130, 255, 0.55); }
+body::after  { box-shadow: inset 0 0 140px 30px rgba(255, 100, 210, 0.42); }
+body.fx-bullet::before { opacity: 1; }
+body.fx-lowg::after { opacity: 1; }
 
 .hud-sound {
   border: 0;
@@ -228,6 +288,9 @@ kbd.wide { padding: 0.20em 0.9em; }
 .dot-c { background: var(--amber); }
 .dot-fire { background: var(--fire); box-shadow: 0 0 10px rgba(255, 138, 43, 0.8); }
 .rule strong.fire { color: var(--fire); }
+.rule strong.pk { color: #ffe14a; }
+.rule strong.pk + strong.pk { color: #8fb0ff; }
+.rule strong.pk + strong.pk + strong.pk { color: #ff8ad8; }
 
 /* ---- knapper ------------------------------------------------------ */
 
@@ -300,16 +363,65 @@ kbd.wide { padding: 0.20em 0.9em; }
   margin: 12px 0 18px;
 }
 
+.q-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* tre prikker: én forsvinder for hvert forkert svar */
+.q-tries {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+.q-tries span { margin-right: 4px; }
+.q-tries i {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 10px rgba(94, 242, 200, 0.55);
+  transition: background 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+.q-tries i.spent {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px rgba(255, 168, 196, 0.55);
+  transform: scale(0.85);
+}
+
 .q-grid {
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr);
-  gap: 26px;
+  grid-template-columns: 230px minmax(0, 1fr);
+  gap: 24px;
   align-items: start;
 }
 .q-grid > * { min-width: 0; }
 .q-figure { display: grid; place-items: center; }
-.q-circle { width: 100%; max-width: 200px; height: auto; }
-.q-rlabel { fill: #ffd166; font-family: 'Fredoka', sans-serif; font-size: 15px; font-weight: 600; }
+.q-fig { width: 100%; max-width: 240px; height: auto; overflow: visible; }
+.q-flabel {
+  fill: #ffd166;
+  font-family: 'Fredoka', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  paint-order: stroke;
+  stroke: rgba(12, 6, 26, 0.85);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+/* når alle forsøg er brugt */
+.panel-q.failed { border-color: rgba(255, 111, 168, 0.55); }
+.panel-q.failed .q-tag { background: var(--pink); color: #2b0716; }
+.btn-continue.btn-fail {
+  background: linear-gradient(100deg, var(--pink), #ff9a7a);
+  box-shadow: 0 10px 26px rgba(255, 111, 168, 0.3);
+}
 
 .q-prompt { margin: 0 0 14px; line-height: 1.55; font-size: 1.02rem; }
 
@@ -533,7 +645,10 @@ kbd.wide { padding: 0.20em 0.9em; }
 @media (max-width: 620px) {
   .panel { padding: 24px 20px; }
   .q-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
-  .q-figure { max-width: 168px; margin: 0 auto; }
+  .q-figure { max-width: 210px; margin: 0 auto; }
+  .fx { top: calc(max(14px, env(safe-area-inset-top)) + 54px); gap: 6px; }
+  .fx-badge { min-width: 86px; padding: 5px 9px 6px; }
+  .fx-name { font-size: 0.72rem; }
   .q-title { font-size: 1.4rem; margin: 10px 0 14px; }
   .q-prompt { font-size: 0.95rem; }
   .keys { display: none; }

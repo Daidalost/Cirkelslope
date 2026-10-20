@@ -42,4 +42,17 @@ export const sfx = {
   wrong:   () => tone({ freq: 220, to: 150, dur: 0.22, type: 'sawtooth', gain: 0.07 }),
   death:   () => { tone({ freq: 440, to: 90, dur: 0.55, type: 'sawtooth', gain: 0.10 });
                    tone({ freq: 220, to: 60, dur: 0.7, type: 'sine', gain: 0.08, delay: 0.05 }); },
+  // hver pickup har sin egen lyd: turbo stiger hurtigt, bullet time falder langsomt, lav tyngde svæver
+  pickup:  (type) => {
+    if (type === 'turbo') {
+      tone({ freq: 260, to: 1400, dur: 0.28, type: 'sawtooth', gain: 0.07 });
+      tone({ freq: 880, dur: 0.18, type: 'triangle', gain: 0.09, delay: 0.16 });
+    } else if (type === 'bullet') {
+      tone({ freq: 900, to: 220, dur: 0.55, type: 'sine', gain: 0.11 });
+      tone({ freq: 450, to: 110, dur: 0.6, type: 'triangle', gain: 0.06, delay: 0.05 });
+    } else {
+      tone({ freq: 520, to: 780, dur: 0.35, type: 'sine', gain: 0.09 });
+      tone({ freq: 780, to: 1040, dur: 0.35, type: 'sine', gain: 0.07, delay: 0.14 });
+    }
+  },
 };

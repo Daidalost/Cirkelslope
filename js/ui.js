@@ -1,27 +1,17 @@
 // ui.js — alt DOM-overlay: menu, portalopgave, HUD og game over.
 
-import { parseAnswer, isCorrect, diagnose } from './questions.js';
+import { parseAnswer, isCorrect, diagnose, MAX_TRIES } from './questions.js';
+import { figureSvg } from './figures.js';
 import * as hs from './highscore.js';
 
 const $ = (id) => document.getElementById(id);
 
-/** Tegner cirklen i opgaven med radius markeret. */
-function circleSvg(r) {
-  const R = 74;
-  return `
-  <svg viewBox="0 0 200 200" class="q-circle" role="img" aria-label="Cirkel med radius ${r} cm">
-    <defs>
-      <radialGradient id="cg" cx="38%" cy="32%">
-        <stop offset="0%" stop-color="#5ef2c8" stop-opacity="0.42"/>
-        <stop offset="100%" stop-color="#7b6bff" stop-opacity="0.14"/>
-      </radialGradient>
-    </defs>
-    <circle cx="100" cy="100" r="${R}" fill="url(#cg)" stroke="#5ef2c8" stroke-width="3"/>
-    <line x1="100" y1="100" x2="${100 + R}" y2="100" stroke="#ffd166" stroke-width="3" stroke-dasharray="6 4"/>
-    <circle cx="100" cy="100" r="3.5" fill="#ffd166"/>
-    <text x="${100 + R / 2}" y="90" text-anchor="middle" class="q-rlabel">r = ${r} cm</text>
-  </svg>`;
-}
+/** Navn og farve på de tidsbegrænsede effekter. */
+export const FX_INFO = {
+  turbo:  { name: 'Turbo',       cls: 'fx-turbo' },
+  bullet: { name: 'Bullet time', cls: 'fx-bullet' },
+  lowg:   { name: 'Lav tyngde',  cls: 'fx-lowg' },
+};
 
 export class UI {
   constructor() {
@@ -36,6 +26,7 @@ export class UI {
       hudNext: $('hud-next'),
       hudSpeed: $('hud-speed'),
       bonus: $('bonus'),
+      fx: $('fx'),
       qBody: $('q-body'),
       goBody: $('go-body'),
       touch: $('touch'),
@@ -44,11 +35,45 @@ export class UI {
     this.onRestart = null;
     this.onContinue = null;
 
+    // et mærke pr. effekt med en bjælke der tæller ned
+    this.fxBadges = {};
+    for (const [key, info] of Object.entries(FX_INFO)) {
+      const el = document.createElement('div');
+      el.className = `fx-badge ${info.cls}`;
+      el.hidden = true;
+      el.innerHTML = `<span class="fx-name">${info.name}</span><span class="fx-bar"><i></i></span>`;
+      this.el.fx.appendChild(el);
+      this.fxBadges[key] = { el, bar: el.querySelector('i') };
+    }
+
     $('btn-start').addEventListener('click', () => this.onStart && this.onStart());
     $('btn-restart').addEventListener('click', () => this.onRestart && this.onRestart());
   }
 
+  /** Viser hvilke effekter der er aktive, og hvor lang tid der er tilbage af dem. */
+  updateFx(fx, durations) {
+    let any = false;
+    for (const [key, badge] of Object.entries(this.fxBadges)) {
+      const left = fx[key] || 0;
+      const on = left > 0;
+      any = any || on;
+      if (badge.el.hidden === on) badge.el.hidden = !on;
+      if (on) badge.bar.style.width = `${Math.max(0, Math.min(1, left / durations[key])) * 100}%`;
+      document.body.classList.toggle(FX_INFO[key].cls, on);
+    }
+    if (this.el.fx.hidden === any) this.el.fx.hidden = !any;
+  }
+
+  clearFx() {
+    for (const [key, badge] of Object.entries(this.fxBadges)) {
+      badge.el.hidden = true;
+      document.body.classList.remove(FX_INFO[key].cls);
+    }
+    this.el.fx.hidden = true;
+  }
+
   showMenu() {
+    this.clearFx();
     this.el.menu.hidden = false;
     this.el.question.hidden = true;
     this.el.gameover.hidden = true;
@@ -72,12 +97,12 @@ export class UI {
     this.el.hudNext.textContent = nextPortal === null ? '–' : Math.max(0, Math.ceil(nextPortal)) + ' m';
   }
 
-  /** Lille kvittering når man rammer en ildring. */
-  flashBonus(meters) {
+  /** Lille kvittering midt på skærmen — ildringe og pickups. */
+  toast(text, cls = '') {
     const el = this.el.bonus;
-    el.textContent = '+' + meters + ' m';
+    el.textContent = text;
+    el.className = 'bonus' + (cls ? ' ' + cls : '');
     el.hidden = false;
-    el.classList.remove('show');
     void el.offsetWidth;              // genstarter animationen
     el.classList.add('show');
     clearTimeout(this._bonusTimer);
@@ -87,21 +112,34 @@ export class UI {
     }, 900);
   }
 
-  /** Viser portalopgaven. `done()` kaldes når spilleren trykker Fortsæt. */
-  showQuestion(q, done) {
+  flashBonus(meters) { this.toast('+' + meters + ' m'); }
+
+  /**
+   * Viser portalopgaven.
+   * `onSolved({attempts})` kaldes når spilleren trykker Fortsæt efter et rigtigt svar,
+   * `onFailed()` når spilleren har brugt alle forsøg og trykker Afslut.
+   */
+  showQuestion(q, { onSolved, onFailed }) {
     this.el.question.hidden = false;
     this.el.touch.hidden = true;
+    let wrong = 0;
     let attempts = 0;
-    let solved = false;
+    let finished = false;
 
+    const dots = Array.from({ length: MAX_TRIES }, () => '<i></i>').join('');
     this.el.qBody.innerHTML = `
-      <div class="q-tag">Portal ${q.index + 1}</div>
+      <div class="q-head">
+        <div class="q-tag">Portal ${q.index + 1} · ${q.tag}</div>
+        <div class="q-tries" id="q-tries" aria-label="${MAX_TRIES} forsøg tilbage">
+          <span>Forsøg</span>${dots}
+        </div>
+      </div>
       <h2 class="q-title">${q.title}</h2>
       <div class="q-grid">
-        <div class="q-figure">${circleSvg(q.r)}</div>
+        <div class="q-figure">${figureSvg(q.figure)}</div>
         <div class="q-right">
           <p class="q-prompt">${q.prompt}</p>
-          <div class="q-formula"><span>Formel</span><strong>${q.formula}</strong><em>π = 3,14</em></div>
+          <div class="q-formula"><span>Formel</span><strong>${q.formula}</strong>${q.usesPi ? '<em>π = 3,14</em>' : ''}</div>
           <form class="q-form" autocomplete="off">
             <label for="q-input">Dit svar</label>
             <div class="q-inputrow">
@@ -109,7 +147,9 @@ export class UI {
               <span class="q-unit">${q.unit}</span>
               <button type="submit" class="btn btn-check" id="q-check">Tjek</button>
             </div>
-            <p class="q-hint">Du må gerne bruge komma, fx 18,84. Rund af til 2 decimaler.</p>
+            <p class="q-hint">${q.usesPi
+              ? 'Du må gerne bruge komma, fx 18,84. Rund af til 2 decimaler.'
+              : 'Skriv bare tallet – enheden står der allerede.'}</p>
           </form>
           <p id="q-feedback" class="q-feedback" role="status" aria-live="polite"></p>
           <div class="q-steps" id="q-steps" hidden></div>
@@ -121,12 +161,19 @@ export class UI {
     const feedback = $('q-feedback');
     const cont = $('q-continue');
     const steps = $('q-steps');
+    const tries = $('q-tries');
     const form = this.el.qBody.querySelector('.q-form');
 
+    const showSteps = (title, list) => {
+      steps.hidden = false;
+      steps.innerHTML = `<span>${title}</span><ol>${list.map(s => `<li>${s}</li>`).join('')}</ol>`;
+    };
+
     const check = () => {
-      if (solved) return;
+      if (finished) return;
       const value = parseAnswer(input.value);
       if (value === null) {
+        // et svar der ikke er et tal, koster ikke et forsøg
         feedback.className = 'q-feedback bad';
         feedback.textContent = 'Skriv et tal – fx 31,4 eller 31.4.';
         this.onWrong && this.onWrong();
@@ -134,7 +181,7 @@ export class UI {
       }
       attempts++;
       if (isCorrect(q, value)) {
-        solved = true;
+        finished = true;
         feedback.className = 'q-feedback good';
         feedback.textContent = `Rigtigt! ${q.worked}`;
         input.disabled = true;
@@ -142,30 +189,50 @@ export class UI {
         cont.disabled = false;
         cont.focus();
         this.onCorrect && this.onCorrect();
-      } else {
-        feedback.className = 'q-feedback bad';
-        feedback.textContent = diagnose(q, value);
-        this.onWrong && this.onWrong();
-        // hjælpen kommer i to trin: først et skub, så hele udregningen
-        if (attempts >= 2) {
-          const shown = attempts >= 4 ? q.steps : q.steps.slice(0, 1);
-          steps.hidden = false;
-          steps.innerHTML = `<span>${attempts >= 4 ? 'Sådan gør du' : 'Kom i gang'}</span>`
-            + `<ol>${shown.map(s => `<li>${s}</li>`).join('')}</ol>`;
-        }
-        input.select();
+        return;
       }
+
+      wrong++;
+      tries.children[MAX_TRIES - wrong + 1]?.classList.add('spent');
+      tries.setAttribute('aria-label', `${MAX_TRIES - wrong} forsøg tilbage`);
+      this.onWrong && this.onWrong();
+
+      if (wrong >= MAX_TRIES) {
+        // tredje forkerte svar: vis løsningen, og lad spilleren afslutte turen
+        finished = true;
+        input.disabled = true;
+        $('q-check').disabled = true;
+        this.el.qBody.classList.add('failed');
+        feedback.className = 'q-feedback bad';
+        feedback.textContent = `Tre forkerte svar – turen slutter her. Det rigtige svar er ${q.worked}.`;
+        showSteps('Sådan gør du', q.steps);
+        cont.textContent = 'Afslut turen ▸';
+        cont.classList.add('btn-fail');
+        cont.disabled = false;
+        cont.focus();
+        return;
+      }
+
+      feedback.className = 'q-feedback bad';
+      feedback.textContent = diagnose(q, value) + (wrong === MAX_TRIES - 1 ? ' Sidste forsøg!' : '');
+      if (wrong === MAX_TRIES - 1) showSteps('Kom i gang', q.steps.slice(0, 1));
+      input.select();
     };
 
     form.addEventListener('submit', (e) => { e.preventDefault(); check(); });
     cont.addEventListener('click', () => {
       this.el.question.hidden = true;
-      done({ attempts });
+      this.el.qBody.classList.remove('failed');
+      cont.blur();
+      if (wrong >= MAX_TRIES) onFailed();
+      else onSolved({ attempts });
     });
     setTimeout(() => input.focus(), 60);
   }
 
   showGameOver({ distance, portals, hoops = 0, cause, best, newBest }) {
+    this.clearFx();
+    this.el.question.hidden = true;
     this.el.hud.hidden = true;
     this.el.touch.hidden = true;
     this.el.gameover.hidden = false;

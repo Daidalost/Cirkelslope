@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#120a24">
-<meta name="description" content="Cirkelslisken – balancér kuglen ned ad slisken og regn omkreds og areal ud ved de runde portaler.">
+<meta name="description" content="Cirkelslisken – balancér kuglen ned ad slisken og regn omkreds og areal af cirkler, kvadrater, rektangler, parallelogrammer og trekanter ved portalerne.">
 <title>Cirkelslisken</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,6 +25,8 @@
   <div class="hud-item"><span>Fart</span><strong id="hud-speed">0 km/t</strong></div>
   <button id="btn-sound" class="hud-sound" title="Slå lyd fra" aria-label="Slå lyd fra">🔊</button>
 </div>
+
+<div id="fx" class="fx" hidden aria-live="polite"></div>
 
 <div id="bonus" class="bonus" hidden aria-hidden="true"></div>
 
@@ -47,7 +49,7 @@
       </svg>
     </div>
     <h1>Cirkelslisken</h1>
-    <p class="tagline">Styr kuglen ned ad den stadig stejlere sliske – og regn dig gennem de runde portaler.</p>
+    <p class="tagline">Styr kuglen ned ad den stadig stejlere sliske – og regn dig gennem portalerne.</p>
 
     <div class="keys">
       <div class="key-row"><kbd>◀</kbd><kbd>▶</kbd><span>styr til siderne</span></div>
@@ -55,10 +57,10 @@
     </div>
 
     <div class="rules">
-      <div class="rule"><span class="dot dot-a"></span><span>Ved hver portal får du en cirkel med kendt radius.</span></div>
-      <div class="rule"><span class="dot dot-b"></span><span>Find omkredsen <em>O = 2 · π · r</em> eller arealet <em>A = π · r²</em></span></div>
-      <div class="rule"><span class="dot dot-c"></span><span>Rigtigt svar låser <strong>Fortsæt</strong> op – så ruller du videre.</span></div>
-      <div class="rule"><span class="dot dot-fire"></span><span>Hop gennem <strong class="fire">ildringene</strong> – hver giver 40 meter ekstra. Og pas på huller og brudte kørebaner.</span></div>
+      <div class="rule"><span class="dot dot-a"></span><span>Ved hver portal skal du finde <em>omkreds</em> eller <em>areal</em> af en cirkel, et kvadrat, et rektangel, et parallelogram eller en trekant.</span></div>
+      <div class="rule"><span class="dot dot-c"></span><span>Du har <strong>tre forsøg</strong>. Rigtigt svar låser <strong>Fortsæt</strong> op – tre forkerte, og turen er slut.</span></div>
+      <div class="rule"><span class="dot dot-fire"></span><span>Hop gennem <strong class="fire">ildringene</strong> (+40 m) og fang <strong class="pk">Turbo</strong>, <strong class="pk">Bullet time</strong> og <strong class="pk">Lav tyngde</strong>.</span></div>
+      <div class="rule"><span class="dot dot-b"></span><span>Nogle steder deler banen sig: en rampe fører op over – eller ned under – grundbanen.</span></div>
     </div>
 
     <button id="btn-start" class="btn btn-big">Start spillet</button>

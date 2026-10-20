@@ -1,7 +1,8 @@
 # Cirkelslisken
 
 En Slope-inspireret 3D-kuglebane, hvor man kommer igennem runde portaler og skal
-regne omkreds eller areal ud fra cirklens radius, før man kan fortsætte.
+regne omkreds eller areal af en figur ud, før man kan fortsætte: cirkler,
+kvadrater, rektangler, parallelogrammer og trekanter.
 Bygget til mellemtrinnet (4.–6. klasse) med π = 3,14.
 
 ## Sådan spiller man
@@ -24,11 +25,55 @@ Slisken er tre kørebaner bred. Undervejs møder man:
 - **Røde søjler** som ikke kan hoppes over — dem skal man styre udenom.
 - **Ildringe** der svæver over banen. Hopper man igennem, giver det 40 meter ekstra.
   Ruller man bare under dem, sker der ingenting.
+- **Pickups** — glødende kugler med en ring om, som man fanger ved at køre igennem dem:
 
-Ved hver portal fryser spillet. Du får en cirkel med kendt radius og skal finde
-enten omkredsen (`O = 2 · π · r`) eller arealet (`A = π · r²`). Svaret må skrives
-med komma eller punktum. Rigtigt svar låser **Fortsæt** op. Er svaret forkert,
-får du et målrettet vink — og efter to forsøg vises fremgangsmåden trin for trin.
+  | Pickup | Farve | Virkning |
+  |---|---|---|
+  | Turbo | gul | 45 % mere fart i 5 sekunder (bredere synsfelt) |
+  | Bullet time | blå | verden kører i 45 % fart i 5 sekunder — mere tid til at reagere |
+  | Lav tyngde | lyserød | 42 % tyngdekraft i 6 sekunder — hop næsten 2½ gang så højt |
+
+  Aktive effekter vises med en bjælke der tæller ned under HUD'en. Fanger man den
+  samme igen, starter tiden forfra. Tiden står stille mens man regner ved en portal.
+- **Alternative baner** — nogle steder deler banen sig. En rampe i én af kørebanerne
+  fører enten **op** til et dæk over grundbanen eller **ned** til et dæk under den.
+  Det alternative dæk har sin egen farve (blågrøn med lyserøde kanter) og altid en
+  pickup og en ildring som belønning.
+  - *Dækket over* ender med en kant — man falder ned på grundbanen og kører videre.
+  - *Dækket under* stiger op igen i fuld bredde. Grundbanen ovenover slipper op lige
+    før, så dem der blev oppe, lander på rampen og kører med op.
+
+  Kører man fra siden ind under rampen op, bliver man nede på grundbanen — man kan
+  ikke falde i en fælde.
+
+### Portalerne
+
+Ved hver portal fryser spillet. Du får en figur med mål og skal finde enten
+omkredsen eller arealet:
+
+| Figur | Omkreds | Areal |
+|---|---|---|
+| Cirkel | `O = 2 · π · r` (eller `π · d`) | `A = π · r²` |
+| Kvadrat | `O = 4 · s` | `A = s · s` |
+| Rektangel | `O = 2 · l + 2 · b` | `A = l · b` |
+| Parallelogram | `O = 2 · g + 2 · s` | `A = g · h` |
+| Trekant | `O = a + b + c` | `A = ½ · g · h` |
+
+De to første portaler bruger kun cirkler, kvadrater og rektangler med små tal.
+Derefter kommer parallelogrammer og trekanter med, og fra femte portal bliver tallene
+større — cirkler kan få diameteren i stedet for radius, og trekanter viser også de
+skrå sider, så man selv skal vælge højden. Samme figur kommer aldrig to gange i træk.
+Alle mål er hele centimeter, og trekanterne er valgt så alle sider går op.
+
+Svaret må skrives med komma eller punktum. Man har **tre forsøg**, vist som tre prikker:
+
+1. Første forkerte svar giver et målrettet vink om den fejl, man sandsynligvis har
+   lavet — fx *"Du har ganget med den skrå side. Brug højden h …"*.
+2. Andet forkerte svar giver første trin af udregningen og en advarsel: *Sidste forsøg!*
+3. Tredje forkerte svar viser hele løsningen, og turen slutter.
+
+Et svar der ikke er et tal, koster ikke et forsøg. Når man trykker **Fortsæt**, kører
+kuglen videre med præcis den placering, retning og fart den havde — også midt i et hop.
 
 ## Highscore
 
@@ -121,11 +166,12 @@ css/style.css       hele designet
 api/scores.js       serverless-endpoint til den fælles highscore
 js/highscore.js     lokal top 10 + kald til /api/scores
 js/main.js          opstart og fejlhåndtering
-js/game.js          fysik, kamera, portallogik, tegneløkke
-js/track.js         den procedurelle bane: form, huller, søjler, portaler
+js/game.js          fysik, kamera, portaler, pickups, tegneløkke
+js/track.js         den procedurelle bane: form, huller, søjler, dæk, portaler
 js/world.js         baggrundens ringe, planeter og måner + farvepalet
-js/questions.js     opgavegenerator, svartjek og fejldiagnose
-js/ui.js            menu, opgavepanel, HUD, game over
+js/questions.js     opgavegenerator (fem figurer), svartjek og fejldiagnose
+js/figures.js       SVG-tegningerne af figurerne med mål
+js/ui.js            menu, opgavepanel, HUD, effekter, game over
 js/gl.js            lille WebGL2-motor (shaders, mesh, renderer)
 js/geometry.js      kugle, torus, cylinder, skive, boks
 js/mat.js           matrix- og vektormatematik
@@ -136,16 +182,21 @@ js/audio.js         syntetiske lydeffekter (WebAudio, ingen lydfiler)
 
 | Hvad | Hvor |
 |---|---|
-| Sværhedsgrad på matematikken (radier) | `js/questions.js` → `radiusFor()` |
-| Omkreds/areal-fordeling | `js/questions.js` → `makeQuestion()` |
+| Hvilke figurer der kommer hvornår | `js/questions.js` → `makeQuestion()`, `levelFor()` |
+| Talstørrelser pr. figur | `js/questions.js` → `cirkel()`, `kvadrat()` osv. |
+| Trekanter med hele sider | `js/questions.js` → `TRI_EASY`, `TRI_HARD` |
+| Antal forsøg ved portalen | `js/questions.js` → `MAX_TRIES` |
+| Pickups: varighed og styrke | `js/game.js` → `FX_DURATION`, `TURBO_SCALE`, `BULLET_SCALE`, `LOWG_SCALE` |
+| Hvor tit der kommer pickups | `js/track.js` → `ensureFeatures()`, afsnit 7 |
+| Alternative dæk: højde, rampe, hyppighed | `js/track.js` → `ALT_OFFSET`, `ALT_RAMP`, afsnit 2 |
 | Afstand mellem portaler | `js/track.js` → `PORTAL_SPACING` |
 | Fart og hvor hurtigt den stiger | `js/game.js` → `speedAt()` |
 | Hoppets højde | `js/game.js` → `JUMP_V` |
-| Hvor tit kørebaner brydes | `js/track.js` → `ensureFeatures()`, afsnit 2 |
+| Hvor tit kørebaner brydes | `js/track.js` → `ensureFeatures()`, afsnit 3 |
 | Hvor tidligt brud begynder | `js/track.js` → `nextLaneZ` i konstruktøren |
-| Ildringenes tæthed og bonus | `js/track.js` → afsnit 5 og `HOOP_BONUS` |
+| Ildringenes tæthed og bonus | `js/track.js` → afsnit 6 og `HOOP_BONUS` |
 | Ildringenes højde og størrelse | `js/track.js` → `HOOP_Y`, `HOOP_R` |
-| Hullernes længde og hyppighed | `js/track.js` → `ensureFeatures()`, afsnit 3 |
+| Hullernes længde og hyppighed | `js/track.js` → `ensureFeatures()`, afsnit 4 |
 | Banens bredde og hældning | `js/track.js` → `halfWidth()`, `height()` |
 | Farver | `js/world.js` → `PALETTE` og `css/style.css` → `:root` |
 | Antal pladser på highscoren | `js/highscore.js` → `TOP` |

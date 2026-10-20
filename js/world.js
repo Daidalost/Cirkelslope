@@ -7,6 +7,11 @@ import { compose, mat4 } from './mat.js';
 export const PALETTE = {
   track:     [0.30, 0.24, 0.52],
   rail:      [0.42, 0.92, 1.00],
+  altTrack:  [0.16, 0.38, 0.50],   // det alternative dæk har sin egen farve, så man kan se valget
+  altRail:   [1.00, 0.56, 0.98],
+  turbo:     [1.00, 0.88, 0.22],
+  bullet:    [0.48, 0.62, 1.00],
+  lowg:      [1.00, 0.46, 0.84],
   ball:      [1.00, 0.62, 0.30],
   ballRing:  [1.00, 0.95, 0.80],
   obstacle:  [1.00, 0.36, 0.62],
