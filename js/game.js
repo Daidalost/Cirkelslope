@@ -153,7 +153,8 @@ export class Game {
   // ---- fysik --------------------------------------------------------
 
   speedAt(z) {
-    return 17 + 15 * this.track.difficulty(z);
+    // starter i 21 m/s (ca. 76 km/t) og stiger til 33 m/s, når banen er på sit sværeste
+    return 21 + 12 * this.track.difficulty(z);
   }
 
   /** Den fart kuglen faktisk har lige nu — med turbo. */

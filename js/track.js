@@ -23,7 +23,7 @@ export const VIEW_AHEAD = 300;        // hvor langt frem banen bygges
 export const VIEW_BEHIND = 70;
 
 export const PORTAL_FIRST = 230;
-export const PORTAL_SPACING = 330;
+export const PORTAL_SPACING = 990;      // en regneportal ca. hver 1000 m, så man kommer i flow imellem
 
 /** Kørebanernes kanter som andel af den halve banebredde. */
 export const LANE_U = [-1, -1 / 3, 1 / 3, 1];
@@ -83,7 +83,7 @@ export class Track {
 
     this.featuresUpTo = 0;
     this.nextAltZ = PORTAL_FIRST + 60;                    // første gaffel lige efter første portal
-    this.nextLaneZ = PORTAL_FIRST + 2 * PORTAL_SPACING;   // lanebrud først efter et par portaler
+    this.nextLaneZ = 890;                                 // lanebrud først efter knap en kilometer
     this.nextGapZ = 320;
     this.nextObstacleZ = 170;
     this.nextHoopZ = 150;

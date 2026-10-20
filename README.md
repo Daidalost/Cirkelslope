@@ -59,8 +59,9 @@ omkredsen eller arealet:
 | Parallelogram | `O = 2 · g + 2 · s` | `A = g · h` |
 | Trekant | `O = a + b + c` | `A = ½ · g · h` |
 
-De to første portaler bruger kun cirkler, kvadrater og rektangler med små tal.
-Derefter kommer parallelogrammer og trekanter med, og fra femte portal bliver tallene
+Portalerne ligger ca. 1000 m fra hinanden, så man kommer i flow imellem dem.
+Første portal bruger kun cirkler, kvadrater og rektangler med små tal.
+Derefter kommer parallelogrammer og trekanter med, og fra fjerde portal bliver tallene
 større — cirkler kan få diameteren i stedet for radius, og trekanter viser også de
 skrå sider, så man selv skal vælge højden. Samme figur kommer aldrig to gange i træk.
 Alle mål er hele centimeter, og trekanterne er valgt så alle sider går op.

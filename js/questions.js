@@ -30,9 +30,12 @@ export function formatDa(n, decimals = 2) {
 const int = (a, b, rnd) => a + Math.floor(rnd() * (b - a + 1));
 const pick = (arr, rnd) => arr[Math.floor(rnd() * arr.length)];
 
-/** 0 de første to portaler, 1 indtil femte, 2 derefter. */
+/**
+ * Niveau pr. portal. Portalerne ligger ca. 1000 m fra hinanden:
+ * første portal er niveau 0, anden og tredje niveau 1, derefter niveau 2.
+ */
 export function levelFor(index) {
-  return index < 2 ? 0 : index < 5 ? 1 : 2;
+  return index < 1 ? 0 : index < 3 ? 1 : 2;
 }
 
 function skeleton(shape, kind, index) {
@@ -54,7 +57,7 @@ function cirkel(kind, level, rnd, index) {
     : [4, 6, 7, 8, 9, 10, 12, 15, 20];
   const r = pick(pool, rnd);
   const d = 2 * r;
-  // fra femte portal får man nogle gange diameteren i stedet for radius
+  // fra fjerde portal får man nogle gange diameteren i stedet for radius
   const useD = level >= 2 && rnd() < 0.35;
   const q = skeleton('cirkel', kind, index);
   q.figure = { type: 'cirkel', r, d, useD };
@@ -250,7 +253,7 @@ function trekant(kind, level, rnd, index) {
       [(g * h) / 2, 'Det er arealet. Omkredsen er siderne lagt sammen.'],
     ];
   } else {
-    // fra femte portal står de skrå sider også på tegningen — man skal selv vælge højden
+    // fra fjerde portal står de skrå sider også på tegningen — man skal selv vælge højden
     const distract = level >= 2;
     const slanted = [a !== h ? a : null, b !== h ? b : null].filter((v) => v !== null);
     q.figure = { type: 'trekant', g, h, p, a, b, show: distract ? ['g', 'h', 'sides'] : ['g', 'h'] };
@@ -278,7 +281,7 @@ const BUILD = { cirkel, kvadrat, rektangel, parallelogram, trekant };
 
 /**
  * Bygger opgaven til portal nr. `index`.
- * De første to portaler holder sig til cirkler, kvadrater og rektangler;
+ * Første portal holder sig til cirkler, kvadrater og rektangler;
  * derefter kommer parallelogrammer og trekanter med. Samme figur kommer
  * aldrig to gange i træk.
  */
