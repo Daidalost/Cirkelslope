@@ -18,8 +18,10 @@ const LAT_MAX     = 21;
 const FALL_DEATH  = 18;      // hvor langt under det laveste dæk man er "væk"
 const PILLAR_H    = 3.2;
 const PORTAL_LEAD = 17;      // opgaven dukker op lige før portalen, så man kan se den forfra
-const STEP_UP     = 0.8;     // så meget kan underlaget stige på én frame, før det er en kant
+const STEP_UP     = 0.8;     // så meget kan underlaget stige på én frame, før det er en kant —
+                             // og så langt under kanten kan man være og stadig blive reddet op på den
 const STEP_DOWN   = 1.6;     // og så meget kan det falde, før man flyver af
+const SLAB        = 3.0;     // banens tykkelse (skørterne under kørefladen)
 
 /** Pickups: hvor længe de varer (sekunder), og hvor kraftigt de virker. */
 export const FX_DURATION = { turbo: 5, bullet: 5, lowg: 6 };
@@ -78,6 +80,7 @@ export class Game {
       x: s.x, y: s.y + BALL_R, z: 0,
       vx: 0, vy: 0, grounded: true, rollX: 0, rollZ: 0,
       doomed: false, doomCause: null,
+      wallHit: false,             // stoppet af forkanten på et hul — falder ned langs den
       deckOff: 0,                 // hvor højt over grundbanen det dæk ligger, man sidst stod på
     };
     this.camX = s.x;
@@ -179,9 +182,22 @@ export class Game {
 
     const b = this.ball;
     const tr = this.track;
-    const speed = this.currentSpeed();
+    const speed = b.wallHit ? 0 : this.currentSpeed();
     const prevZ = b.z;
+    const prevX = b.x;
     b.z += speed * pdt;
+    // Kuglen følger banens sving: dens plads på tværs af banen flytter med banens midte,
+    // så den bliver liggende, hvor den er, når man ikke rører tasterne.
+    b.x += tr.centerX(b.z) - tr.centerX(prevZ);
+
+    // Kørte vi ind i forkanten af banen — fx den fjerne side af et hul, vi ikke nåede over?
+    // Så stopper kuglen ved kanten og falder ned langs den i stedet for at køre igennem.
+    if (this.hitsFrontFace(prevZ, prevX)) {
+      b.z = prevZ;
+      b.x = prevX;
+      b.vy = Math.min(b.vy, 0);
+      if (b.doomed && !b.wallHit) { b.wallHit = true; sfx.bump(); }
+    }
 
     // Styring. Kameraet kigger ned ad banen langs +z, og så peger verdens +x
     // mod venstre på skærmen. Derfor trækker højre pil fra x.
@@ -190,6 +206,7 @@ export class Game {
     else b.vx = damp(b.vx, 0, 7, pdt);
     b.vx = clamp(b.vx, -LAT_MAX, LAT_MAX);
     b.x += b.vx * pdt;
+    this.collideSides();
 
     // Underlaget er den højeste faste flade under kuglen — grundbanen eller et af
     // de alternative dæk. Rampen op og ned følges blødt; falder fladen pludselig
@@ -212,17 +229,21 @@ export class Game {
     } else {
       b.vy -= gravity * pdt;
       b.y += b.vy * pdt;
+      this.collideCeiling();
+      // Lander man, mens kuglen stadig er lidt under kanten, bliver den løftet op —
+      // et hop der lige akkurat når over hullet, tæller altså.
       if (!b.doomed && ground !== null && b.vy <= 0 && b.y - BALL_R <= ground) {
         if (!b.grounded) sfx.land();
         b.y = ground + BALL_R; b.vy = 0; b.grounded = true;
         b.deckOff = ground - tr.height(b.z);
       } else {
         b.grounded = false;
-        // Fortabt: der er intet under kuglen, og den er allerede under det laveste dæk.
-        // Indtil da kan den stadig nå over et hul eller lande på et dæk længere nede.
+        // Fortabt: der er intet under kuglen, og den er nået for langt ned under det
+        // laveste dæk til at blive reddet op på en kant. Indtil da kan den stadig nå over
+        // et hul eller lande på et dæk længere nede.
         if (!b.doomed &&
             tr.groundBelow(b.z, b.x, b.y - BALL_R + STEP_UP) === null &&
-            b.y - BALL_R <= tr.lowestDeck(b.z) + 0.1) {
+            b.y - BALL_R < tr.lowestDeck(b.z) - STEP_UP) {
           b.doomed = true;
           b.doomCause = tr.isGap(b.z) ? 'Du faldt ned i hullet.'
             : tr.laneIndex(b.z, b.x) < 0 ? 'Du røg ud over kanten.'
@@ -304,6 +325,78 @@ export class Game {
       nextPortal: next ? next.z - b.z : null,
     });
     this.ui.updateFx(this.fx, FX_DURATION);
+  }
+
+  // ---- kollisioner med banens kanter ----------------------------------
+
+  /**
+   * Er kuglen lige kørt ind i forkanten af et dæk? Det sker, når et dæk begynder
+   * foran kuglen (den fjerne side af et hul, et lanebrud der slutter …), og kuglen
+   * er så langt under kørefladen, at den ikke kan reddes op på kanten.
+   */
+  hitsFrontFace(prevZ, prevX) {
+    const b = this.ball, tr = this.track;
+    const lane = tr.laneIndex(b.z, b.x);
+    if (lane < 0) return false;
+    const prevLane = tr.laneIndex(prevZ, prevX);
+    const bottom = b.y - BALL_R, top = b.y + BALL_R;
+    for (const deck of ['main', 'alt']) {
+      const ys = tr.deckSurfaceY(deck, b.z, lane);
+      if (ys === null) continue;
+      // fandtes dækket også dér, hvor vi kom fra, er det ikke en forkant
+      const before = prevLane >= 0 ? tr.deckSurfaceY(deck, prevZ, prevLane) : null;
+      if (before !== null && Math.abs(before - ys) < 2) continue;
+      if (bottom < ys - STEP_UP && top > ys - SLAB) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Banen er massiv. Siderne er ikke vægge — man kan sagtens køre ud over kanten
+   * eller ned i en brudt kørebane. Men er kuglen først faldet så langt ned under
+   * kørefladen, at den ikke kan reddes op på kanten, kan den ikke køre sidelæns ind
+   * gennem siden af banen. Den falder ned langs siden i stedet.
+   */
+  collideSides() {
+    const b = this.ball, tr = this.track;
+    const cx = tr.centerX(b.z), half = tr.halfWidth(b.z);
+    let lat = b.x - cx;
+    const bottom = b.y - BALL_R, top = b.y + BALL_R;
+
+    for (const deck of ['main', 'alt']) {
+      const lanes = deck === 'main' ? tr.mainLanesAt(b.z) : tr.altLanesAt(b.z);
+      const ys = tr.deckY(b.z, deck);
+      // kun når kuglen er nede i højde med banens krop (under kanten, over bunden)
+      if (!(bottom < ys - STEP_UP && top > ys - SLAB)) continue;
+      for (const e of tr.edges(lanes)) {
+        const w = e.u * half;
+        // kuglen er ude over den lukkede side og må ikke trænge ind i dækket
+        if ((lat - w) * e.dir < 0) {
+          const lim = w - e.dir * BALL_R;
+          if ((lat - lim) * e.dir > 0) {
+            lat = lim;
+            if (b.vx * e.dir > 0) b.vx = 0;
+          }
+        }
+      }
+    }
+    b.x = cx + lat;
+  }
+
+  /** Hopper man op under et dæk, slår man hovedet og falder ned igen. */
+  collideCeiling() {
+    const b = this.ball, tr = this.track;
+    if (b.vy <= 0) return;
+    const lane = tr.laneIndex(b.z, b.x);
+    if (lane < 0) return;
+    for (const deck of ['main', 'alt']) {
+      const ys = tr.deckSurfaceY(deck, b.z, lane);
+      if (ys === null || b.y >= ys) continue;          // dækket ligger under kuglen
+      if (b.y + BALL_R > ys - 0.05) {
+        b.y = ys - 0.05 - BALL_R;
+        b.vy = -b.vy * 0.25;
+      }
+    }
   }
 
   /**

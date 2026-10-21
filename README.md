@@ -15,9 +15,19 @@ Bygget til mellemtrinnet (4.–6. klasse) med π = 3,14.
 
 På telefon og tablet vises tre knapper nederst på skærmen i stedet.
 
-Slisken er tre kørebaner bred. Undervejs møder man:
+Slisken er tre kørebaner bred. Kører man ud over kanten, falder man af. Kuglen
+følger banens sving af sig selv, så den bliver liggende i sin bane, når man ikke
+rører tasterne. Slisken bliver stejlere de første 2600 m og holder derefter en
+hældning på ca. 15°. Banen er massiv: er kuglen først faldet ned under kørefladen,
+kan den ikke køre ind gennem siden af banen — men ligger den kun lidt under kanten,
+kan den nå op igen.
 
-- **Huller** tværs over hele banen. Hopper man ikke, falder man igennem og turen er slut.
+Undervejs møder man:
+
+- **Huller** tværs over hele banen. Hopper man ikke, falder man i, og turen er slut.
+  Når et hop lige akkurat kanten på den anden side, bliver kuglen løftet op på den.
+  Er hoppet for kort, rammer kuglen hullets forkant og falder ned langs den — den
+  kører ikke igennem banen.
 - **Brudte kørebaner** — strækninger på 35–65 m hvor en eller to af de tre baner
   mangler. Fænomenet begynder efter anden portal og bliver hyppigere jo længere
   man kommer; til sidst er der steder med kun én bane tilbage. Lysende tværbjælker
@@ -198,7 +208,7 @@ js/audio.js         syntetiske lydeffekter (WebAudio, ingen lydfiler)
 | Ildringenes tæthed og bonus | `js/track.js` → afsnit 6 og `HOOP_BONUS` |
 | Ildringenes højde og størrelse | `js/track.js` → `HOOP_Y`, `HOOP_R` |
 | Hullernes længde og hyppighed | `js/track.js` → `ensureFeatures()`, afsnit 4 |
-| Banens bredde og hældning | `js/track.js` → `halfWidth()`, `height()` |
+| Banens bredde og hældning | `js/track.js` → `halfWidth()`, `height()`, `SLOPE_CAP_Z` |
 | Farver | `js/world.js` → `PALETTE` og `css/style.css` → `:root` |
 | Antal pladser på highscoren | `js/highscore.js` → `TOP` |
 | Blokerede navne | `js/highscore.js` og `api/scores.js` → `BLOCKED` (begge steder) |

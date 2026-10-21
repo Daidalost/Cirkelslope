@@ -61,6 +61,10 @@ export function mulberry32(a) {
 }
 
 const snap = (z) => Math.round(z / DZ) * DZ;
+
+/** Efter denne afstand bliver slisken ikke stejlere. */
+export const SLOPE_CAP_Z = 2600;
+
 const smooth = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
 
 export class Track {
@@ -100,10 +104,23 @@ export class Track {
          + Math.sin(z * 0.0041 + this.p2) * (6.0 + 11 * d);
   }
 
+  /**
+   * Banens højde. Hældningen vokser, indtil banen er på sit sværeste (2600 m),
+   * og holdes derefter konstant på ca. 15°. Før blev den ved med at vokse, og
+   * ved 8000 m var slisken over 30° stejl — så lå banen bag kuglen højere end
+   * kameraet, og søjler og portaler sank ned i den skrå flade.
+   */
   height(z) {
     const d = this.difficulty(z);
-    return -(0.095 * z + 0.000032 * z * z)
-         + Math.sin(z * 0.019 + this.p3) * 1.5 * (0.4 + d);
+    const zc = Math.min(z, SLOPE_CAP_Z);
+    let y = -(0.095 * zc + 0.000032 * zc * zc);
+    if (z > SLOPE_CAP_Z) y -= (0.095 + 0.000064 * SLOPE_CAP_Z) * (z - SLOPE_CAP_Z);
+    return y + Math.sin(z * 0.019 + this.p3) * 1.5 * (0.4 + d);
+  }
+
+  /** Hældningen (fald pr. meter frem) — kun til test og fejlsøgning. */
+  slopeAt(z) {
+    return (this.height(z - 1) - this.height(z + 1)) / 2;
   }
 
   halfWidth(z) {
@@ -161,6 +178,20 @@ export class Track {
     if (!seg) return ALL_CLOSED;
     if (z < seg.rampEnd) return ONLY[seg.lane];
     return ALL_OPEN;
+  }
+
+  /**
+   * Kanterne på et dæk: overalt hvor en åben kørebane støder op til en lukket
+   * bane eller til banens yderside. dir peger ind mod den åbne bane.
+   */
+  edges(lanes) {
+    const out = [];
+    for (let k = 0; k <= 3; k++) {
+      const left = k > 0 ? lanes[k - 1] : false;
+      const right = k < 3 ? lanes[k] : false;
+      if (left !== right) out.push({ u: LANE_U[k], dir: right ? 1 : -1 });
+    }
+    return out;
   }
 
   laneIndex(z, x) {
@@ -533,9 +564,28 @@ export class Track {
     };
   }
 
+  /** Smider alt det, der ligger langt bag kuglen, så lange ture ikke bliver tunge. */
+  prune(ballZ) {
+    const cut = ballZ - 150;
+    const drop = (arr, endOf) => {
+      if (arr.length && endOf(arr[0]) < cut) {
+        let i = 0;
+        while (i < arr.length && endOf(arr[i]) < cut) i++;
+        arr.splice(0, i);
+      }
+    };
+    drop(this.gaps, (g) => g.z1);
+    drop(this.laneBreaks, (s) => s.z1);
+    drop(this.altSegs, (s) => s.z1);
+    drop(this.obstacles, (o) => o.z);
+    drop(this.hoops, (h) => h.z);
+    drop(this.pickups, (p) => p.z);
+  }
+
   /** Bygger nye klumper foran spilleren og smider dem bag ud igen. */
   update(ballZ) {
     this.ensureFeatures(ballZ + VIEW_AHEAD + 200);
+    this.prune(ballZ);
     const chunkLen = CHUNK_NODES * DZ;
     const first = Math.floor((ballZ - VIEW_BEHIND) / chunkLen);
     const last = Math.floor((ballZ + VIEW_AHEAD) / chunkLen);

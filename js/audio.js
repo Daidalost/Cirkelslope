@@ -40,6 +40,7 @@ export const sfx = {
                    tone({ freq: 880, dur: 0.16, type: 'triangle', gain: 0.13, delay: 0.11 });
                    tone({ freq: 1180, dur: 0.24, type: 'sine', gain: 0.10, delay: 0.22 }); },
   wrong:   () => tone({ freq: 220, to: 150, dur: 0.22, type: 'sawtooth', gain: 0.07 }),
+  bump:    () => tone({ freq: 150, to: 80, dur: 0.09, type: 'triangle', gain: 0.12 }),
   death:   () => { tone({ freq: 440, to: 90, dur: 0.55, type: 'sawtooth', gain: 0.10 });
                    tone({ freq: 220, to: 60, dur: 0.7, type: 'sine', gain: 0.08, delay: 0.05 }); },
   // hver pickup har sin egen lyd: turbo stiger hurtigt, bullet time falder langsomt, lav tyngde svæver
